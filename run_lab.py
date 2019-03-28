@@ -24,6 +24,9 @@ debug_level = 'DEBUG'
 logger.toggle_debug(debug_modules, debug_level)
 
 
+def is_headed():
+    return os.environ.get('HEADED', 'true') == 'true'
+
 def run_new_mode(spec_file, spec_name, lab_mode):
     '''Run to generate new data with `search, train, dev`'''
     spec = spec_util.get(spec_file, spec_name)
@@ -95,11 +98,9 @@ def main():
 
 if __name__ == '__main__':
     mp.set_start_method('spawn')  # for distributed pytorch to work
-    if sys.platform == 'darwin':
+    if sys.platform == 'darwin' or is_headed():
         # avoid xvfb for MacOS: https://github.com/nipy/nipype/issues/1400
         main()
     else:
-        #with Xvfb() as xvfb:  # safety context for headless machines
-        #    main()
-        main()
-
+        with Xvfb() as xvfb:  # safety context for headless machines
+            main()
