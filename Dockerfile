@@ -15,29 +15,35 @@ LABEL website="https://github.com/kengz/SLM-Lab"
 
 SHELL ["/bin/bash", "-c"]
 
+# create and set the working directory
+#RUN mkdir -p /root/SLM-Lab
+RUN groupadd -g 999 slm && \
+    useradd -r -u 999 -g slm slm && \
+    mkdir -p /home/slm/SLM-Lab && \
+    chmod -R 777 /home/slm
+
+#WORKDIR /root/SLM-Lab
+WORKDIR /home/slm/SLM-Lab
+
 # basic system dependencies for dev, PyTorch, OpenAI gym
 RUN apt-get update && \
     apt-get install -y build-essential \
     curl nano git wget zip libstdc++6 \
+    libxtst6 libgconf2-4 libnss3 \
     python3-dev zlib1g-dev libjpeg-dev cmake swig python-pyglet python3-opengl libboost-all-dev libsdl2-dev libosmesa6-dev patchelf ffmpeg xvfb && \
     rm -rf /var/lib/apt/lists/*
 
 RUN curl -O https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh && \
-    bash Miniconda3-latest-Linux-x86_64.sh -b && \
+    bash Miniconda3-latest-Linux-x86_64.sh -b -p /home/slm/miniconda3 && \
     rm Miniconda3-latest-Linux-x86_64.sh && \
-    echo '. ~/miniconda3/etc/profile.d/conda.sh' >> ~/.bashrc && \
-    . ~/miniconda3/etc/profile.d/conda.sh && \
+    echo '. /home/slm/miniconda3/etc/profile.d/conda.sh' >> ~/.bashrc && \
+    . /home/slm/miniconda3/etc/profile.d/conda.sh && \
     conda --version
-
-# create and set the working directory
-RUN mkdir -p /root/SLM-Lab
-
-WORKDIR /root/SLM-Lab
 
 # install dependencies, only retrigger on dependency changes
 COPY environment.yml environment.yml
 # install Python and Conda dependencies
-RUN . ~/miniconda3/etc/profile.d/conda.sh && \
+RUN . /home/slm/miniconda3/etc/profile.d/conda.sh && \
     conda create -n lab python=3.6 -y && \
     conda activate lab && \
     conda env update -f environment.yml && \
@@ -51,7 +57,7 @@ RUN curl -sL https://deb.nodesource.com/setup_11.x | bash - && \
     npm install -g yarn
 COPY package.json yarn.lock ./
 RUN yarn install
-RUN . ~/miniconda3/etc/profile.d/conda.sh && \
+RUN . /home/slm/miniconda3/etc/profile.d/conda.sh && \
     conda activate lab && \
     pip install unityagents==0.2.0 && \
     pip uninstall -y tensorflow tensorboard
@@ -59,10 +65,10 @@ RUN . ~/miniconda3/etc/profile.d/conda.sh && \
 # copy file at last to not trigger changes above unnecessarily
 COPY . .
 
-RUN . ~/miniconda3/etc/profile.d/conda.sh && \
+RUN . /home/slm/miniconda3/etc/profile.d/conda.sh && \
     conda activate lab && \
-    python setup.py test && \
-    pytest --verbose --no-flaky-report test/spec/test_dist_spec.py && \
+#    python setup.py test && \
+#    pytest --verbose --no-flaky-report test/spec/test_dist_spec.py && \
     yarn reset
 
 CMD ["/bin/bash"]
